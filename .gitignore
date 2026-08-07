@@ -1,0 +1,19 @@
+# Gradle
+.gradle/
+build/
+
+# IntelliJ IDEA
+.idea/
+*.iml
+out/
+
+# Operating system files
+.DS_Store
+Thumbs.db
+
+# Runtime data
+*.db
+*.db-shm
+*.db-wal
+*.log
+*.tmp

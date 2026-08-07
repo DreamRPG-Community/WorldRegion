@@ -1,0 +1,18 @@
+name: WorldRegion
+version: ${version}
+main: cn.mythicland.worldregion.WorldRegionPlugin
+author: ShanguanLinG
+load: POSTWORLD
+depend: [ Lib ]
+softdepend: [ WorldManager ]
+description: Named world regions and administrator landmarks.
+
+commands:
+  worldregion:
+    description: Manage world regions and landmarks.
+    aliases: [ wr ]
+
+permissions:
+  worldregion.admin:
+    description: Allows WorldRegion administration and landmark teleportation.
+    default: op

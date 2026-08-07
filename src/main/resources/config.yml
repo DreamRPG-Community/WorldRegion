@@ -1,0 +1,8 @@
+selection:
+  wand: "WOOD_SPADE"
+
+particle:
+  enabled: true
+  interval-ticks: 10
+  render-distance: 64
+  max-regions-per-player: 32
