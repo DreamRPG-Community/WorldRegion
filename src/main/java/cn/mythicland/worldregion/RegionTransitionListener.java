@@ -13,11 +13,7 @@ import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.scheduler.BukkitTask;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -40,6 +36,44 @@ final class RegionTransitionListener implements Listener {
     RegionTransitionListener(PluginTaskScope tasks, WorldRegionApi regions) {
         this.tasks = Objects.requireNonNull(tasks, "tasks");
         this.regions = Objects.requireNonNull(regions, "regions");
+    }
+
+    private static boolean hasBlockChanged(Location from, Location to) {
+        if (!Objects.equals(from.getWorld(), to.getWorld())) return true;
+        return from.getBlockX() != to.getBlockX()
+                || from.getBlockY() != to.getBlockY()
+                || from.getBlockZ() != to.getBlockZ();
+    }
+
+    static boolean shouldAnnounceLeave(
+            RegionTransitionTracker.Transition transition,
+            Location from,
+            Location to
+    ) {
+        if (transition.exited().isEmpty()) return false;
+        return transition.entered().isEmpty()
+                || differentWorld(from, to)
+                || !transition.exited().orElseThrow().bounds().contains(to);
+    }
+
+    static boolean shouldAnnounceEnter(
+            RegionTransitionTracker.Transition transition,
+            Location from,
+            Location to
+    ) {
+        if (transition.entered().isEmpty()) return false;
+        return transition.exited().isEmpty()
+                || differentWorld(from, to)
+                || !transition.entered().orElseThrow().bounds().contains(from);
+    }
+
+    private static boolean sameRegion(RegionDefinition first, RegionDefinition second) {
+        if (first == null || second == null) return first == second;
+        return first.id().equals(second.id());
+    }
+
+    private static boolean differentWorld(Location from, Location to) {
+        return !Objects.equals(from.getWorld(), to.getWorld());
     }
 
     @EventHandler
@@ -100,13 +134,6 @@ final class RegionTransitionListener implements Listener {
         tasks.cancel(task);
     }
 
-    private static boolean hasBlockChanged(Location from, Location to) {
-        if (!Objects.equals(from.getWorld(), to.getWorld())) return true;
-        return from.getBlockX() != to.getBlockX()
-                || from.getBlockY() != to.getBlockY()
-                || from.getBlockZ() != to.getBlockZ();
-    }
-
     private void sendEnter(Player player, RegionDefinition region) {
         sendActionbar(player, "&f你来到了 " + region.displayName());
     }
@@ -142,36 +169,5 @@ final class RegionTransitionListener implements Listener {
             sendActionbar(player, message);
         });
         pendingActionbars.put(playerId, task);
-    }
-
-    static boolean shouldAnnounceLeave(
-            RegionTransitionTracker.Transition transition,
-            Location from,
-            Location to
-    ) {
-        if (transition.exited().isEmpty()) return false;
-        return transition.entered().isEmpty()
-                || differentWorld(from, to)
-                || !transition.exited().orElseThrow().bounds().contains(to);
-    }
-
-    static boolean shouldAnnounceEnter(
-            RegionTransitionTracker.Transition transition,
-            Location from,
-            Location to
-    ) {
-        if (transition.entered().isEmpty()) return false;
-        return transition.exited().isEmpty()
-                || differentWorld(from, to)
-                || !transition.entered().orElseThrow().bounds().contains(from);
-    }
-
-    private static boolean sameRegion(RegionDefinition first, RegionDefinition second) {
-        if (first == null || second == null) return first == second;
-        return first.id().equals(second.id());
-    }
-
-    private static boolean differentWorld(Location from, Location to) {
-        return !Objects.equals(from.getWorld(), to.getWorld());
     }
 }

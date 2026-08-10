@@ -14,15 +14,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Owns YAML persistence for WorldRegion's public definitions.
@@ -51,6 +43,112 @@ final class WorldRegionDataStore {
         reload();
     }
 
+    static Optional<RegionDefinition> selectRegion(
+            Collection<RegionDefinition> candidates,
+            String worldName,
+            Location location
+    ) {
+        Objects.requireNonNull(candidates, "candidates");
+        String selectedWorldName = Objects.requireNonNull(worldName, "worldName");
+        Objects.requireNonNull(location, "location");
+        return candidates.stream()
+                .filter(region -> region.worldName().equals(selectedWorldName))
+                .filter(region -> region.bounds().contains(location))
+                .min(regionComparator());
+    }
+
+    private static void validateFile(Path file) {
+        if (Files.isSymbolicLink(file)) {
+            throw new IllegalStateException("WorldRegion data file is a symbolic link: " + file);
+        }
+        if (!Files.isRegularFile(file, LinkOption.NOFOLLOW_LINKS)) {
+            throw new IllegalStateException("WorldRegion data file is not a regular file: " + file);
+        }
+    }
+
+    private static ConfigurationSection requireSection(ConfigurationSection parent, String path) {
+        ConfigurationSection section = parent.getConfigurationSection(path);
+        if (section == null) throw new IllegalStateException("Missing WorldRegion section: " + path);
+        return section;
+    }
+
+    static ConfigurationSection requireRootSection(
+            YamlConfiguration configuration,
+            String fileName,
+            String path
+    ) {
+        Objects.requireNonNull(configuration, "configuration");
+        Objects.requireNonNull(fileName, "fileName");
+        Objects.requireNonNull(path, "path");
+        ConfigurationSection section = configuration.getConfigurationSection(path);
+        if (section != null) return section;
+        Set<String> rootKeys = configuration.getKeys(false);
+        if (rootKeys.isEmpty()) return configuration.createSection(path);
+        if (rootKeys.size() == 1 && rootKeys.contains(path) && configuration.get(path) == null) {
+            return configuration.createSection(path);
+        }
+        throw new IllegalStateException(fileName + " requires a " + path + " section");
+    }
+
+    private static String requiredString(ConfigurationSection section, String path) {
+        Object value = section.get(path);
+        if (!(value instanceof String text) || text.isBlank()) {
+            throw new IllegalStateException("Configuration requires a non-empty string: " + path);
+        }
+        return text.trim();
+    }
+
+    private static int requiredInt(ConfigurationSection section, String path) {
+        Object value = section.get(path);
+        if (!(value instanceof Number number)) {
+            throw new IllegalStateException("Configuration requires a number: " + path);
+        }
+        return number.intValue();
+    }
+
+    private static double requiredDouble(ConfigurationSection section, String path) {
+        Object value = section.get(path);
+        if (!(value instanceof Number number)) {
+            throw new IllegalStateException("Configuration requires a number: " + path);
+        }
+        double result = number.doubleValue();
+        if (!Double.isFinite(result)) {
+            throw new IllegalStateException("Configuration requires a finite number: " + path);
+        }
+        return result;
+    }
+
+    private static String requireId(String id) {
+        String value = Objects.requireNonNull(id, "id").trim();
+        if (value.isBlank()) throw new IllegalArgumentException("id cannot be blank");
+        return value;
+    }
+
+    private static Comparator<RegionDefinition> regionComparator() {
+        return Comparator.comparingInt(RegionDefinition::priority)
+                .reversed()
+                .thenComparingLong(region -> region.bounds().volume())
+                .thenComparing(RegionDefinition::id);
+    }
+
+    private static double distanceSquaredToBounds(Location location, RegionBounds bounds) {
+        double x = clamp(location.getX(), bounds.minX(), bounds.maxX() + 1.0D);
+        double y = clamp(location.getY(), bounds.minY(), bounds.maxY() + 1.0D);
+        double z = clamp(location.getZ(), bounds.minZ(), bounds.maxZ() + 1.0D);
+        double xDelta = location.getX() - x;
+        double yDelta = location.getY() - y;
+        double zDelta = location.getZ() - z;
+        return xDelta * xDelta + yDelta * yDelta + zDelta * zDelta;
+    }
+
+    private static double clamp(double value, double min, double max) {
+        return Math.clamp(value, min, max);
+    }
+
+    private static <T> Map<String, T> immutableMap(Map<String, T> values) {
+        return Collections.unmodifiableMap(new LinkedHashMap<>(values));
+    }
+
     synchronized void reload() {
         regions = loadRegions();
         landmarks = loadLandmarks();
@@ -69,20 +167,6 @@ final class WorldRegionDataStore {
         World world = Objects.requireNonNull(location.getWorld(), "location.world");
         String worldName = worldManager.logicalNameOrBukkitName(world);
         return selectRegion(regions.values(), worldName, location);
-    }
-
-    static Optional<RegionDefinition> selectRegion(
-            Collection<RegionDefinition> candidates,
-            String worldName,
-            Location location
-    ) {
-        Objects.requireNonNull(candidates, "candidates");
-        String selectedWorldName = Objects.requireNonNull(worldName, "worldName");
-        Objects.requireNonNull(location, "location");
-        return candidates.stream()
-                .filter(region -> region.worldName().equals(selectedWorldName))
-                .filter(region -> region.bounds().contains(location))
-                .min(regionComparator());
     }
 
     synchronized Optional<LandmarkDefinition> findLandmark(String id) {
@@ -263,97 +347,5 @@ final class WorldRegionDataStore {
         }
         plugin.saveResource(resourceName, false);
         validateFile(target);
-    }
-
-    private static void validateFile(Path file) {
-        if (Files.isSymbolicLink(file)) {
-            throw new IllegalStateException("WorldRegion data file is a symbolic link: " + file);
-        }
-        if (!Files.isRegularFile(file, LinkOption.NOFOLLOW_LINKS)) {
-            throw new IllegalStateException("WorldRegion data file is not a regular file: " + file);
-        }
-    }
-
-    private static ConfigurationSection requireSection(ConfigurationSection parent, String path) {
-        ConfigurationSection section = parent.getConfigurationSection(path);
-        if (section == null) throw new IllegalStateException("Missing WorldRegion section: " + path);
-        return section;
-    }
-
-    static ConfigurationSection requireRootSection(
-            YamlConfiguration configuration,
-            String fileName,
-            String path
-    ) {
-        Objects.requireNonNull(configuration, "configuration");
-        Objects.requireNonNull(fileName, "fileName");
-        Objects.requireNonNull(path, "path");
-        ConfigurationSection section = configuration.getConfigurationSection(path);
-        if (section != null) return section;
-        Set<String> rootKeys = configuration.getKeys(false);
-        if (rootKeys.isEmpty()) return configuration.createSection(path);
-        if (rootKeys.size() == 1 && rootKeys.contains(path) && configuration.get(path) == null) {
-            return configuration.createSection(path);
-        }
-        throw new IllegalStateException(fileName + " requires a " + path + " section");
-    }
-
-    private static String requiredString(ConfigurationSection section, String path) {
-        Object value = section.get(path);
-        if (!(value instanceof String text) || text.isBlank()) {
-            throw new IllegalStateException("Configuration requires a non-empty string: " + path);
-        }
-        return text.trim();
-    }
-
-    private static int requiredInt(ConfigurationSection section, String path) {
-        Object value = section.get(path);
-        if (!(value instanceof Number number)) {
-            throw new IllegalStateException("Configuration requires a number: " + path);
-        }
-        return number.intValue();
-    }
-
-    private static double requiredDouble(ConfigurationSection section, String path) {
-        Object value = section.get(path);
-        if (!(value instanceof Number number)) {
-            throw new IllegalStateException("Configuration requires a number: " + path);
-        }
-        double result = number.doubleValue();
-        if (!Double.isFinite(result)) {
-            throw new IllegalStateException("Configuration requires a finite number: " + path);
-        }
-        return result;
-    }
-
-    private static String requireId(String id) {
-        String value = Objects.requireNonNull(id, "id").trim();
-        if (value.isBlank()) throw new IllegalArgumentException("id cannot be blank");
-        return value;
-    }
-
-    private static Comparator<RegionDefinition> regionComparator() {
-        return Comparator.comparingInt(RegionDefinition::priority)
-                .reversed()
-                .thenComparingLong(region -> region.bounds().volume())
-                .thenComparing(RegionDefinition::id);
-    }
-
-    private static double distanceSquaredToBounds(Location location, RegionBounds bounds) {
-        double x = clamp(location.getX(), bounds.minX(), bounds.maxX() + 1.0D);
-        double y = clamp(location.getY(), bounds.minY(), bounds.maxY() + 1.0D);
-        double z = clamp(location.getZ(), bounds.minZ(), bounds.maxZ() + 1.0D);
-        double xDelta = location.getX() - x;
-        double yDelta = location.getY() - y;
-        double zDelta = location.getZ() - z;
-        return xDelta * xDelta + yDelta * yDelta + zDelta * zDelta;
-    }
-
-    private static double clamp(double value, double min, double max) {
-        return Math.clamp(value, min, max);
-    }
-
-    private static <T> Map<String, T> immutableMap(Map<String, T> values) {
-        return Collections.unmodifiableMap(new LinkedHashMap<>(values));
     }
 }

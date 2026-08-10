@@ -35,7 +35,7 @@ public record RegionBounds(
     /**
      * Creates block-aligned bounds from two locations in the same world.
      *
-     * @param first first selected location
+     * @param first  first selected location
      * @param second second selected location
      * @return normalized inclusive block bounds
      */

@@ -2,13 +2,7 @@ package cn.mythicland.worldregion;
 
 import cn.mythicland.worldregion.api.RegionDefinition;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * Tracks each player's last resolved region and emits only meaningful transitions.
@@ -17,6 +11,14 @@ final class RegionTransitionTracker {
 
     private final Map<UUID, RegionDefinition> currentRegions = new HashMap<>();
     private final Set<UUID> initializedPlayers = new HashSet<>();
+
+    private static boolean sameRegion(
+            RegionDefinition first,
+            RegionDefinition second
+    ) {
+        if (first == null || second == null) return first == second;
+        return first.id().equals(second.id());
+    }
 
     @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
     Optional<Transition> update(UUID playerId, Optional<RegionDefinition> currentRegion) {
@@ -49,14 +51,6 @@ final class RegionTransitionTracker {
     void clearAll() {
         currentRegions.clear();
         initializedPlayers.clear();
-    }
-
-    private static boolean sameRegion(
-            RegionDefinition first,
-            RegionDefinition second
-    ) {
-        if (first == null || second == null) return first == second;
-        return first.id().equals(second.id());
     }
 
     /**

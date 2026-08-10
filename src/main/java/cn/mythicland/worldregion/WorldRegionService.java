@@ -34,6 +34,19 @@ final class WorldRegionService implements WorldRegionApi {
         this.worldManager = Objects.requireNonNull(worldManager, "worldManager");
     }
 
+    private static boolean teleport(Player player, LandmarkDefinition landmark, World world) {
+        if (!player.isOnline()) throw new IllegalStateException("Player is no longer online");
+        Location target = new Location(
+                world,
+                landmark.x(),
+                landmark.y(),
+                landmark.z(),
+                landmark.yaw(),
+                landmark.pitch()
+        );
+        return player.teleport(target);
+    }
+
     @Override
     public Collection<RegionDefinition> regions() {
         return dataStore.regions();
@@ -62,18 +75,5 @@ final class WorldRegionService implements WorldRegionApi {
         return lib.supplyOnMain(() -> worldManager.resolveWorld(landmark.worldName()))
                 .thenCompose(future -> future)
                 .thenCompose(world -> lib.supplyOnMain(() -> teleport(targetPlayer, landmark, world)));
-    }
-
-    private static boolean teleport(Player player, LandmarkDefinition landmark, World world) {
-        if (!player.isOnline()) throw new IllegalStateException("Player is no longer online");
-        Location target = new Location(
-                world,
-                landmark.x(),
-                landmark.y(),
-                landmark.z(),
-                landmark.yaw(),
-                landmark.pitch()
-        );
-        return player.teleport(target);
     }
 }

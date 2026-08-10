@@ -46,7 +46,6 @@ final class WorldRegionLifecycle implements LibPluginLifecycle {
 
     @Override
     public void reload() {
-        settings.reload();
         dataStore.reload();
         restartParticleTask();
         plugin.getLogger().info("WorldRegion configuration reloaded.");

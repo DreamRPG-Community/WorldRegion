@@ -31,6 +31,17 @@ final class RegionSelectionListener implements Listener {
         this.particles = Objects.requireNonNull(particles, "particles");
     }
 
+    private static String format(Block block) {
+        return block.getWorld().getName()
+                + " ("
+                + block.getX()
+                + ", "
+                + block.getY()
+                + ", "
+                + block.getZ()
+                + ")";
+    }
+
     @EventHandler
     public void onPlayerInteract(PlayerInteractEvent event) {
         Action action = event.getAction();
@@ -57,16 +68,5 @@ final class RegionSelectionListener implements Listener {
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
         selections.clear(event.getPlayer().getUniqueId());
-    }
-
-    private static String format(Block block) {
-        return block.getWorld().getName()
-                + " ("
-                + block.getX()
-                + ", "
-                + block.getY()
-                + ", "
-                + block.getZ()
-                + ")";
     }
 }

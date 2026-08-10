@@ -1,9 +1,9 @@
 package cn.mythicland.worldregion;
 
-import cn.mythicland.lib.bootstrap.annotation.InjectComponent;
-import cn.mythicland.lib.config.ConfigSupport;
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.plugin.java.JavaPlugin;
+import cn.mythicland.lib.bootstrap.annotation.ConfigComponent;
+import cn.mythicland.lib.config.ConfigValue;
+import cn.mythicland.lib.config.ConfigView;
+import cn.mythicland.lib.config.ConfigurableComponent;
 
 import java.util.Locale;
 import java.util.Objects;
@@ -11,27 +11,39 @@ import java.util.Objects;
 /**
  * Mutable configuration holder for WorldRegion's selection and particle runtime.
  */
-@InjectComponent
-public final class WorldRegionSettings {
+@ConfigComponent
+public final class WorldRegionSettings implements ConfigurableComponent {
 
-    private final JavaPlugin plugin;
     private volatile SettingsSnapshot snapshot;
 
     /**
-     * Loads the initial WorldRegion configuration.
-     *
-     * @param plugin owning plugin
+     * Creates the Lib-managed WorldRegion configuration component.
      */
-    public WorldRegionSettings(JavaPlugin plugin) {
-        this.plugin = Objects.requireNonNull(plugin, "plugin");
-        this.snapshot = read(ConfigSupport.loadDefault(plugin));
+    public WorldRegionSettings() {
+    }
+
+    private static SettingsSnapshot read(RawSettings configuration) {
+        String wandName = configuration.wand().toUpperCase(Locale.ROOT);
+        if (!wandName.equals("WOOD_SPADE")) {
+            throw new IllegalStateException("WorldRegion selection.wand must be WOOD_SPADE: " + wandName);
+        }
+        return new SettingsSnapshot(
+                configuration.particlesEnabled(),
+                configuration.intervalTicks(),
+                configuration.renderDistance(),
+                configuration.maxRegionsPerPlayer()
+        );
     }
 
     /**
-     * Reloads the configuration from disk.
+     * Binds and validates the current configuration snapshot.
+     *
+     * @param configuration Lib-owned configuration view
      */
-    public void reload() {
-        snapshot = read(ConfigSupport.loadDefault(plugin));
+    @Override
+    public void reload(ConfigView configuration) {
+        Objects.requireNonNull(configuration, "configuration");
+        snapshot = read(configuration.bind(RawSettings.class));
     }
 
     /**
@@ -43,62 +55,46 @@ public final class WorldRegionSettings {
         return snapshot;
     }
 
-    private SettingsSnapshot read(FileConfiguration configuration) {
-        String wandName = requiredString(configuration).toUpperCase(Locale.ROOT);
-        if (!wandName.equals("WOOD_SPADE")) {
-            throw new IllegalStateException("WorldRegion selection.wand must be WOOD_SPADE: " + wandName);
-        }
-        boolean particlesEnabled = requiredBoolean(configuration);
-        long intervalTicks = requiredPositiveLong(configuration);
-        int renderDistance = requiredPositiveInt(configuration, "particle.render-distance");
-        int maxRegionsPerPlayer = requiredPositiveInt(configuration, "particle.max-regions-per-player");
-        return new SettingsSnapshot(
-                particlesEnabled,
-                intervalTicks,
-                renderDistance,
-                maxRegionsPerPlayer
-        );
-    }
-
-    private static String requiredString(FileConfiguration configuration) {
-        Object value = configuration.get("selection.wand");
-        if (!(value instanceof String text) || text.isBlank()) {
-            throw new IllegalStateException("Configuration requires a non-empty string: selection.wand");
-        }
-        return text.trim();
-    }
-
-    private static boolean requiredBoolean(FileConfiguration configuration) {
-        Object value = configuration.get("particle.enabled");
-        if (!(value instanceof Boolean result)) {
-            throw new IllegalStateException("Configuration requires a boolean: particle.enabled");
-        }
-        return result;
-    }
-
-    private static long requiredPositiveLong(FileConfiguration configuration) {
-        Object value = configuration.get("particle.interval-ticks");
-        if (!(value instanceof Number number) || number.longValue() < 1L) {
-            throw new IllegalStateException("Configuration requires a positive number: particle.interval-ticks");
-        }
-        return number.longValue();
-    }
-
-    private static int requiredPositiveInt(FileConfiguration configuration, String path) {
-        Object value = configuration.get(path);
-        if (!(value instanceof Number number) || number.intValue() < 1) {
-            throw new IllegalStateException("Configuration requires a positive integer: " + path);
-        }
-        return number.intValue();
+    private record RawSettings(
+            @ConfigValue(
+                    path = "selection.wand",
+                    defaultValue = "WOOD_SPADE",
+                    nonBlank = true
+            )
+            String wand,
+            @ConfigValue(
+                    path = "particle.enabled",
+                    defaultValue = "true"
+            )
+            boolean particlesEnabled,
+            @ConfigValue(
+                    path = "particle.interval-ticks",
+                    defaultValue = "10",
+                    positive = true
+            )
+            long intervalTicks,
+            @ConfigValue(
+                    path = "particle.render-distance",
+                    defaultValue = "64",
+                    positive = true
+            )
+            int renderDistance,
+            @ConfigValue(
+                    path = "particle.max-regions-per-player",
+                    defaultValue = "32",
+                    positive = true
+            )
+            int maxRegionsPerPlayer
+    ) {
     }
 
     /**
      * Immutable particle and selection settings.
      *
-     * @param particlesEnabled      whether boundary particles are enabled
-     * @param intervalTicks         redraw interval
-     * @param renderDistance        maximum distance from a viewer
-     * @param maxRegionsPerPlayer   maximum rendered regions per viewer
+     * @param particlesEnabled    whether boundary particles are enabled
+     * @param intervalTicks       redraw interval
+     * @param renderDistance      maximum distance from a viewer
+     * @param maxRegionsPerPlayer maximum rendered regions per viewer
      */
     public record SettingsSnapshot(
             boolean particlesEnabled,

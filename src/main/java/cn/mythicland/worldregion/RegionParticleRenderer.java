@@ -3,12 +3,7 @@ package cn.mythicland.worldregion;
 import cn.mythicland.lib.bootstrap.annotation.InjectComponent;
 import cn.mythicland.worldregion.api.RegionBounds;
 import cn.mythicland.worldregion.api.RegionDefinition;
-import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
-import org.bukkit.Color;
-import org.bukkit.Location;
-import org.bukkit.Material;
-import org.bukkit.Particle;
+import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
@@ -37,6 +32,59 @@ final class RegionParticleRenderer {
         this.settings = Objects.requireNonNull(settings, "settings");
         this.dataStore = Objects.requireNonNull(dataStore, "dataStore");
         this.selections = Objects.requireNonNull(selections, "selections");
+    }
+
+    private static void drawParticle(
+            Player player,
+            RegionParticleGeometry.Point point,
+            Color color,
+            double maxDistanceSquared
+    ) {
+        Location location = new Location(player.getWorld(), point.x(), point.y(), point.z());
+        if (location.distanceSquared(player.getLocation()) > maxDistanceSquared) return;
+        Particle.REDSTONE.builder()
+                .location(location)
+                // Paper 1.12.2 encodes the exact colored redstone particle with count zero.
+                .count(0)
+                .receivers(player)
+                .force(true)
+                .extra(EDGE_PARTICLE_SIZE)
+                .color(color)
+                .spawn();
+    }
+
+    static Color colorFor(String displayName) {
+        String translated = ChatColor.translateAlternateColorCodes('&', displayName);
+        for (int index = 0; index + 1 < translated.length(); index++) {
+            if (translated.charAt(index) != ChatColor.COLOR_CHAR) continue;
+            ChatColor color = ChatColor.getByChar(translated.charAt(index + 1));
+            if (color == null || !color.isColor()) continue;
+            return toBukkitColor(color);
+        }
+        return Color.WHITE;
+    }
+
+    @SuppressWarnings("DuplicateBranchesInSwitch")
+    private static Color toBukkitColor(ChatColor color) {
+        return switch (color) {
+            case BLACK -> Color.fromRGB(0, 0, 0);
+            case DARK_BLUE -> Color.fromRGB(0, 0, 170);
+            case DARK_GREEN -> Color.fromRGB(0, 170, 0);
+            case DARK_AQUA -> Color.fromRGB(0, 170, 170);
+            case DARK_RED -> Color.fromRGB(170, 0, 0);
+            case DARK_PURPLE -> Color.fromRGB(170, 0, 170);
+            case GOLD -> Color.fromRGB(255, 170, 0);
+            case GRAY -> Color.fromRGB(170, 170, 170);
+            case DARK_GRAY -> Color.fromRGB(85, 85, 85);
+            case BLUE -> Color.fromRGB(85, 85, 255);
+            case GREEN -> Color.fromRGB(85, 255, 85);
+            case AQUA -> Color.fromRGB(85, 255, 255);
+            case RED -> Color.fromRGB(255, 85, 85);
+            case LIGHT_PURPLE -> Color.fromRGB(255, 85, 255);
+            case YELLOW -> Color.fromRGB(255, 255, 85);
+            case WHITE -> Color.WHITE;
+            default -> Color.WHITE;
+        };
     }
 
     void renderAll() {
@@ -141,58 +189,5 @@ final class RegionParticleRenderer {
         )) {
             drawParticle(player, point, Color.WHITE, maxDistanceSquared);
         }
-    }
-
-    private static void drawParticle(
-            Player player,
-            RegionParticleGeometry.Point point,
-            Color color,
-            double maxDistanceSquared
-    ) {
-        Location location = new Location(player.getWorld(), point.x(), point.y(), point.z());
-        if (location.distanceSquared(player.getLocation()) > maxDistanceSquared) return;
-        Particle.REDSTONE.builder()
-                .location(location)
-                // Paper 1.12.2 encodes the exact colored redstone particle with count zero.
-                .count(0)
-                .receivers(player)
-                .force(true)
-                .extra(EDGE_PARTICLE_SIZE)
-                .color(color)
-                .spawn();
-    }
-
-    static Color colorFor(String displayName) {
-        String translated = ChatColor.translateAlternateColorCodes('&', displayName);
-        for (int index = 0; index + 1 < translated.length(); index++) {
-            if (translated.charAt(index) != ChatColor.COLOR_CHAR) continue;
-            ChatColor color = ChatColor.getByChar(translated.charAt(index + 1));
-            if (color == null || !color.isColor()) continue;
-            return toBukkitColor(color);
-        }
-        return Color.WHITE;
-    }
-
-    @SuppressWarnings("DuplicateBranchesInSwitch")
-    private static Color toBukkitColor(ChatColor color) {
-        return switch (color) {
-            case BLACK -> Color.fromRGB(0, 0, 0);
-            case DARK_BLUE -> Color.fromRGB(0, 0, 170);
-            case DARK_GREEN -> Color.fromRGB(0, 170, 0);
-            case DARK_AQUA -> Color.fromRGB(0, 170, 170);
-            case DARK_RED -> Color.fromRGB(170, 0, 0);
-            case DARK_PURPLE -> Color.fromRGB(170, 0, 170);
-            case GOLD -> Color.fromRGB(255, 170, 0);
-            case GRAY -> Color.fromRGB(170, 170, 170);
-            case DARK_GRAY -> Color.fromRGB(85, 85, 85);
-            case BLUE -> Color.fromRGB(85, 85, 255);
-            case GREEN -> Color.fromRGB(85, 255, 85);
-            case AQUA -> Color.fromRGB(85, 255, 255);
-            case RED -> Color.fromRGB(255, 85, 85);
-            case LIGHT_PURPLE -> Color.fromRGB(255, 85, 255);
-            case YELLOW -> Color.fromRGB(255, 255, 85);
-            case WHITE -> Color.WHITE;
-            default -> Color.WHITE;
-        };
     }
 }

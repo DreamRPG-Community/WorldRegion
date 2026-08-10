@@ -16,11 +16,7 @@ import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Locale;
-import java.util.Objects;
+import java.util.*;
 import java.util.logging.Level;
 
 /**
@@ -57,6 +53,45 @@ final class WorldRegionCommand {
         this.dataStore = Objects.requireNonNull(dataStore, "dataStore");
         this.selections = Objects.requireNonNull(selections, "selections");
         this.worldManager = Objects.requireNonNull(worldManager, "worldManager");
+    }
+
+    private static ParsedDefinition parse(List<String> arguments) {
+        String id = arguments.getFirst();
+        List<String> nameParts = new ArrayList<>(arguments.subList(1, arguments.size()));
+        int priority = 0;
+        if (nameParts.size() > 1) {
+            String last = nameParts.getLast();
+            if (isIntegerLiteral(last)) {
+                try {
+                    priority = Integer.parseInt(last);
+                    nameParts.removeLast();
+                } catch (NumberFormatException exception) {
+                    throw new IllegalArgumentException("区域优先级超出整数范围: " + last, exception);
+                }
+            }
+        }
+        String displayName = String.join(" ", nameParts).trim();
+        if (displayName.isBlank()) {
+            throw new IllegalArgumentException(
+                    "区域显示名不能为空。\n" + ROOT + " create <id> <显示名> [priority]"
+            );
+        }
+        return new ParsedDefinition(id, displayName, priority);
+    }
+
+    private static boolean isIntegerLiteral(String value) {
+        return value.matches("[+-]?\\d+");
+    }
+
+    private static String format(Location location) {
+        return location.getWorld().getName()
+                + " ("
+                + location.getBlockX()
+                + ", "
+                + location.getBlockY()
+                + ", "
+                + location.getBlockZ()
+                + ")";
     }
 
     @CommandHandler("pos1")
@@ -257,45 +292,6 @@ final class WorldRegionCommand {
         String id = arguments.getFirst();
         dataStore.deleteLandmark(id);
         context.sender().sendMessage(LegacyText.colorize("&a地标已删除: " + id));
-    }
-
-    private static ParsedDefinition parse(List<String> arguments) {
-        String id = arguments.getFirst();
-        List<String> nameParts = new ArrayList<>(arguments.subList(1, arguments.size()));
-        int priority = 0;
-        if (nameParts.size() > 1) {
-            String last = nameParts.getLast();
-            if (isIntegerLiteral(last)) {
-                try {
-                    priority = Integer.parseInt(last);
-                    nameParts.removeLast();
-                } catch (NumberFormatException exception) {
-                    throw new IllegalArgumentException("区域优先级超出整数范围: " + last, exception);
-                }
-            }
-        }
-        String displayName = String.join(" ", nameParts).trim();
-        if (displayName.isBlank()) {
-            throw new IllegalArgumentException(
-                    "区域显示名不能为空。\n" + ROOT + " create <id> <显示名> [priority]"
-            );
-        }
-        return new ParsedDefinition(id, displayName, priority);
-    }
-
-    private static boolean isIntegerLiteral(String value) {
-        return value.matches("[+-]?\\d+");
-    }
-
-    private static String format(Location location) {
-        return location.getWorld().getName()
-                + " ("
-                + location.getBlockX()
-                + ", "
-                + location.getBlockY()
-                + ", "
-                + location.getBlockZ()
-                + ")";
     }
 
     private record ParsedDefinition(String id, String displayName, int priority) {
