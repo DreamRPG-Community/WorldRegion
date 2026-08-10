@@ -1,6 +1,6 @@
 package cn.mythicland.worldregion;
 
-import cn.mythicland.lib.api.LibApi;
+import cn.mythicland.lib.bootstrap.PluginTaskScope;
 import cn.mythicland.lib.bootstrap.annotation.ListenerComponent;
 import cn.mythicland.lib.text.LegacyActionBar;
 import cn.mythicland.worldregion.api.RegionDefinition;
@@ -30,15 +30,15 @@ final class RegionTransitionListener implements Listener {
     private static final long ACTIONBAR_MINIMUM_DISPLAY_NANOS = TimeUnit.SECONDS.toNanos(1L);
     private static final long SERVER_TICK_NANOS = TimeUnit.MILLISECONDS.toNanos(50L);
 
-    private final LibApi lib;
+    private final PluginTaskScope tasks;
     private final WorldRegionApi regions;
     private final RegionTransitionTracker transitions = new RegionTransitionTracker();
     private final Map<UUID, BukkitTask> pendingEntries = new HashMap<>();
     private final Map<UUID, BukkitTask> pendingActionbars = new HashMap<>();
     private final Map<UUID, Long> actionbarAvailableAtNanos = new HashMap<>();
 
-    RegionTransitionListener(LibApi lib, WorldRegionApi regions) {
-        this.lib = Objects.requireNonNull(lib, "lib");
+    RegionTransitionListener(PluginTaskScope tasks, WorldRegionApi regions) {
+        this.tasks = Objects.requireNonNull(tasks, "tasks");
         this.regions = Objects.requireNonNull(regions, "regions");
     }
 
@@ -80,7 +80,7 @@ final class RegionTransitionListener implements Listener {
 
     private void scheduleEntry(Player player, RegionDefinition region, UUID playerId) {
         if (!transitions.isCurrent(playerId, region)) return;
-        BukkitTask task = lib.runLater(ACTIONBAR_MINIMUM_DISPLAY_TICKS, () -> {
+        BukkitTask task = tasks.runLater(ACTIONBAR_MINIMUM_DISPLAY_TICKS, () -> {
             pendingEntries.remove(playerId);
             if (!player.isOnline()) return;
             regions.findRegion(player.getLocation())
@@ -92,12 +92,12 @@ final class RegionTransitionListener implements Listener {
 
     private void cancelPendingEntry(UUID playerId) {
         BukkitTask task = pendingEntries.remove(playerId);
-        if (task != null) task.cancel();
+        tasks.cancel(task);
     }
 
     private void cancelPendingActionbar(UUID playerId) {
         BukkitTask task = pendingActionbars.remove(playerId);
-        if (task != null) task.cancel();
+        tasks.cancel(task);
     }
 
     private static boolean hasBlockChanged(Location from, Location to) {
@@ -133,7 +133,7 @@ final class RegionTransitionListener implements Listener {
                 1L,
                 (remaining + SERVER_TICK_NANOS - 1L) / SERVER_TICK_NANOS
         );
-        BukkitTask task = lib.runLater(delayTicks, () -> {
+        BukkitTask task = tasks.runLater(delayTicks, () -> {
             pendingActionbars.remove(playerId);
             if (!player.isOnline()) {
                 actionbarAvailableAtNanos.remove(playerId);
@@ -151,7 +151,7 @@ final class RegionTransitionListener implements Listener {
     ) {
         if (transition.exited().isEmpty()) return false;
         return transition.entered().isEmpty()
-                || !sameWorld(from, to)
+                || differentWorld(from, to)
                 || !transition.exited().orElseThrow().bounds().contains(to);
     }
 
@@ -162,7 +162,7 @@ final class RegionTransitionListener implements Listener {
     ) {
         if (transition.entered().isEmpty()) return false;
         return transition.exited().isEmpty()
-                || !sameWorld(from, to)
+                || differentWorld(from, to)
                 || !transition.entered().orElseThrow().bounds().contains(from);
     }
 
@@ -171,7 +171,7 @@ final class RegionTransitionListener implements Listener {
         return first.id().equals(second.id());
     }
 
-    private static boolean sameWorld(Location from, Location to) {
-        return Objects.equals(from.getWorld(), to.getWorld());
+    private static boolean differentWorld(Location from, Location to) {
+        return !Objects.equals(from.getWorld(), to.getWorld());
     }
 }

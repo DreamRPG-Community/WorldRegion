@@ -82,8 +82,7 @@ final class WorldRegionDataStore {
         return candidates.stream()
                 .filter(region -> region.worldName().equals(selectedWorldName))
                 .filter(region -> region.bounds().contains(location))
-                .sorted(regionComparator())
-                .findFirst();
+                .min(regionComparator());
     }
 
     synchronized Optional<LandmarkDefinition> findLandmark(String id) {
@@ -351,7 +350,7 @@ final class WorldRegionDataStore {
     }
 
     private static double clamp(double value, double min, double max) {
-        return Math.max(min, Math.min(max, value));
+        return Math.clamp(value, min, max);
     }
 
     private static <T> Map<String, T> immutableMap(Map<String, T> values) {

@@ -19,6 +19,7 @@ public final class WorldRegionPlugin extends JavaPlugin {
      * Starts WorldRegion through Lib's annotation bootstrap.
      */
     @Override
+    @SuppressWarnings("resource")
     public void onEnable() {
         try {
             LibApi lib = LibApi.require(this);

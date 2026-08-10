@@ -44,12 +44,12 @@ public final class WorldRegionSettings {
     }
 
     private SettingsSnapshot read(FileConfiguration configuration) {
-        String wandName = requiredString(configuration, "selection.wand").toUpperCase(Locale.ROOT);
+        String wandName = requiredString(configuration).toUpperCase(Locale.ROOT);
         if (!wandName.equals("WOOD_SPADE")) {
             throw new IllegalStateException("WorldRegion selection.wand must be WOOD_SPADE: " + wandName);
         }
-        boolean particlesEnabled = requiredBoolean(configuration, "particle.enabled");
-        long intervalTicks = requiredPositiveLong(configuration, "particle.interval-ticks");
+        boolean particlesEnabled = requiredBoolean(configuration);
+        long intervalTicks = requiredPositiveLong(configuration);
         int renderDistance = requiredPositiveInt(configuration, "particle.render-distance");
         int maxRegionsPerPlayer = requiredPositiveInt(configuration, "particle.max-regions-per-player");
         return new SettingsSnapshot(
@@ -60,26 +60,26 @@ public final class WorldRegionSettings {
         );
     }
 
-    private static String requiredString(FileConfiguration configuration, String path) {
-        Object value = configuration.get(path);
+    private static String requiredString(FileConfiguration configuration) {
+        Object value = configuration.get("selection.wand");
         if (!(value instanceof String text) || text.isBlank()) {
-            throw new IllegalStateException("Configuration requires a non-empty string: " + path);
+            throw new IllegalStateException("Configuration requires a non-empty string: selection.wand");
         }
         return text.trim();
     }
 
-    private static boolean requiredBoolean(FileConfiguration configuration, String path) {
-        Object value = configuration.get(path);
+    private static boolean requiredBoolean(FileConfiguration configuration) {
+        Object value = configuration.get("particle.enabled");
         if (!(value instanceof Boolean result)) {
-            throw new IllegalStateException("Configuration requires a boolean: " + path);
+            throw new IllegalStateException("Configuration requires a boolean: particle.enabled");
         }
         return result;
     }
 
-    private static long requiredPositiveLong(FileConfiguration configuration, String path) {
-        Object value = configuration.get(path);
+    private static long requiredPositiveLong(FileConfiguration configuration) {
+        Object value = configuration.get("particle.interval-ticks");
         if (!(value instanceof Number number) || number.longValue() < 1L) {
-            throw new IllegalStateException("Configuration requires a positive number: " + path);
+            throw new IllegalStateException("Configuration requires a positive number: particle.interval-ticks");
         }
         return number.longValue();
     }

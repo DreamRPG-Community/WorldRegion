@@ -3,7 +3,6 @@ package cn.mythicland.worldregion;
 import cn.mythicland.lib.bootstrap.annotation.InjectComponent;
 import cn.mythicland.worldregion.api.RegionBounds;
 import cn.mythicland.worldregion.api.RegionDefinition;
-import com.destroystokyo.paper.ParticleBuilder;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Color;
@@ -79,7 +78,7 @@ final class RegionParticleRenderer {
             double maxDistanceSquared
     ) {
         if (selection == null || selection.first() == null) return;
-        Location first = selection.first();
+        Location first = Objects.requireNonNull(selection.first(), "selection.first");
         if (!Objects.requireNonNull(first.getWorld(), "selection.first.world").equals(player.getWorld())) return;
         Location second = selection.second();
         if (second == null) {
@@ -116,9 +115,9 @@ final class RegionParticleRenderer {
         double y = corner.getBlockY();
         double z = corner.getBlockZ();
         double size = 0.75D;
-        drawEdge(player, x, y, z, x + size, y, z, Color.WHITE, maxDistanceSquared);
-        drawEdge(player, x, y, z, x, y + size, z, Color.WHITE, maxDistanceSquared);
-        drawEdge(player, x, y, z, x, y, z + size, Color.WHITE, maxDistanceSquared);
+        drawEdge(player, x, y, z, x + size, y, z, maxDistanceSquared);
+        drawEdge(player, x, y, z, x, y + size, z, maxDistanceSquared);
+        drawEdge(player, x, y, z, x, y, z + size, maxDistanceSquared);
     }
 
     private void drawEdge(
@@ -129,7 +128,6 @@ final class RegionParticleRenderer {
             double endX,
             double endY,
             double endZ,
-            Color color,
             double maxDistanceSquared
     ) {
         RegionParticleGeometry.Edge edge = new RegionParticleGeometry.Edge(
@@ -141,7 +139,7 @@ final class RegionParticleRenderer {
                 EDGE_PARTICLE_SPACING,
                 MAX_EDGE_STEPS
         )) {
-            drawParticle(player, point, color, maxDistanceSquared);
+            drawParticle(player, point, Color.WHITE, maxDistanceSquared);
         }
     }
 
@@ -175,6 +173,7 @@ final class RegionParticleRenderer {
         return Color.WHITE;
     }
 
+    @SuppressWarnings("DuplicateBranchesInSwitch")
     private static Color toBukkitColor(ChatColor color) {
         return switch (color) {
             case BLACK -> Color.fromRGB(0, 0, 0);

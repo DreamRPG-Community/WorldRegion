@@ -41,7 +41,7 @@ final class WorldManagerIntegration {
     CompletableFuture<World> resolveWorld(String logicalName) {
         World loaded = Bukkit.getWorld(logicalName);
         if (loaded != null) return CompletableFuture.completedFuture(loaded);
-        if (!ensureProvider()) {
+        if (providerUnavailable()) {
             return CompletableFuture.failedFuture(
                     new IllegalStateException("World is not loaded and WorldManager is unavailable: " + logicalName)
             );
@@ -70,7 +70,7 @@ final class WorldManagerIntegration {
     }
 
     private Optional<String> logicalName(World world) {
-        if (world == null || !ensureProvider()) return Optional.empty();
+        if (world == null || providerUnavailable()) return Optional.empty();
         try {
             Object result = findLogicalName.invoke(provider, world);
             if (!(result instanceof Optional<?> optional)) return Optional.empty();
@@ -81,12 +81,12 @@ final class WorldManagerIntegration {
         }
     }
 
-    private boolean ensureProvider() {
-        if (provider != null && findLogicalName != null && findWorld != null && loadWorld != null) return true;
-        if (lookupFailed) return false;
+    private boolean providerUnavailable() {
+        if (provider != null && findLogicalName != null && findWorld != null && loadWorld != null) return false;
+        if (lookupFailed) return true;
 
         Plugin worldManager = plugin.getServer().getPluginManager().getPlugin(PLUGIN_NAME);
-        if (worldManager == null || !worldManager.isEnabled()) return false;
+        if (worldManager == null || !worldManager.isEnabled()) return true;
 
         try {
             Class<?> apiClass = Class.forName(
@@ -95,17 +95,17 @@ final class WorldManagerIntegration {
                     worldManager.getClass().getClassLoader()
             );
             RegisteredServiceProvider<?> registration = getRegistration(apiClass);
-            if (registration == null || registration.getProvider() == null) return false;
+            if (registration == null || registration.getProvider() == null) return true;
             Object service = registration.getProvider();
             provider = service;
             findLogicalName = service.getClass().getMethod("findLogicalName", World.class);
             findWorld = service.getClass().getMethod("find", String.class);
             loadWorld = service.getClass().getMethod("load", String.class);
-            return true;
+            return false;
         } catch (ReflectiveOperationException | RuntimeException exception) {
             lookupFailed = true;
             logLookupFailure(exception);
-            return false;
+            return true;
         }
     }
 

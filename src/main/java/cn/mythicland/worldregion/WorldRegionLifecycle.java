@@ -1,8 +1,8 @@
 package cn.mythicland.worldregion;
 
-import cn.mythicland.lib.api.LibApi;
 import cn.mythicland.lib.bootstrap.LibPluginLifecycle;
-import cn.mythicland.lib.bootstrap.annotation.InjectComponent;
+import cn.mythicland.lib.bootstrap.PluginTaskScope;
+import cn.mythicland.lib.bootstrap.annotation.LifecycleComponent;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
 
@@ -11,11 +11,11 @@ import java.util.Objects;
 /**
  * Owns WorldRegion's scheduled particle lifecycle and reload boundary.
  */
-@InjectComponent
+@LifecycleComponent
 final class WorldRegionLifecycle implements LibPluginLifecycle {
 
     private final JavaPlugin plugin;
-    private final LibApi lib;
+    private final PluginTaskScope tasks;
     private final WorldRegionSettings settings;
     private final WorldRegionDataStore dataStore;
     private final RegionParticleRenderer particles;
@@ -24,14 +24,14 @@ final class WorldRegionLifecycle implements LibPluginLifecycle {
 
     WorldRegionLifecycle(
             JavaPlugin plugin,
-            LibApi lib,
+            PluginTaskScope tasks,
             WorldRegionSettings settings,
             WorldRegionDataStore dataStore,
             RegionParticleRenderer particles,
             RegionSelectionService selections
     ) {
         this.plugin = Objects.requireNonNull(plugin, "plugin");
-        this.lib = Objects.requireNonNull(lib, "lib");
+        this.tasks = Objects.requireNonNull(tasks, "tasks");
         this.settings = Objects.requireNonNull(settings, "settings");
         this.dataStore = Objects.requireNonNull(dataStore, "dataStore");
         this.particles = Objects.requireNonNull(particles, "particles");
@@ -54,17 +54,17 @@ final class WorldRegionLifecycle implements LibPluginLifecycle {
 
     @Override
     public void disable() {
-        if (particleTask != null) particleTask.cancel();
+        tasks.cancel(particleTask);
         particleTask = null;
         selections.clearAll();
     }
 
     private void restartParticleTask() {
-        if (particleTask != null) particleTask.cancel();
+        tasks.cancel(particleTask);
         particleTask = null;
         WorldRegionSettings.SettingsSnapshot current = settings.snapshot();
         if (!current.particlesEnabled()) return;
-        particleTask = lib.runTimer(
+        particleTask = tasks.runTimer(
                 1L,
                 current.intervalTicks(),
                 particles::renderAll

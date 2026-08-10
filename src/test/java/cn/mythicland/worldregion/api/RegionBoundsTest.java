@@ -2,6 +2,7 @@ package cn.mythicland.worldregion.api;
 
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -30,6 +31,6 @@ class RegionBoundsTest {
     void volumeCountsEverySelectedBlock() {
         RegionBounds bounds = new RegionBounds(-1, 4, 2, 1, 5, 4);
 
-        assertTrue(bounds.volume() == 18L);
+        assertEquals(18L, bounds.volume());
     }
 }

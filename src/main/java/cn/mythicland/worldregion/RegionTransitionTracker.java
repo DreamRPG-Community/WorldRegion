@@ -18,6 +18,7 @@ final class RegionTransitionTracker {
     private final Map<UUID, RegionDefinition> currentRegions = new HashMap<>();
     private final Set<UUID> initializedPlayers = new HashSet<>();
 
+    @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
     Optional<Transition> update(UUID playerId, Optional<RegionDefinition> currentRegion) {
         UUID targetPlayerId = Objects.requireNonNull(playerId, "playerId");
         Optional<RegionDefinition> targetRegion = Objects.requireNonNull(currentRegion, "currentRegion");

@@ -23,16 +23,16 @@ public record RegionDefinition(
      * Validates the public region model.
      */
     public RegionDefinition {
-        id = requireIdentifier(id, "id");
+        id = requireIdentifier(id);
         displayName = requireText(displayName, "displayName");
         worldName = requireText(worldName, "worldName");
-        bounds = Objects.requireNonNull(bounds, "bounds");
+        Objects.requireNonNull(bounds, "bounds");
     }
 
-    private static String requireIdentifier(String value, String fieldName) {
-        String identifier = requireText(value, fieldName);
+    private static String requireIdentifier(String value) {
+        String identifier = requireText(value, "id");
         if (!identifier.matches("[A-Za-z0-9_-]+")) {
-            throw new IllegalArgumentException(fieldName + " contains unsupported characters: " + identifier);
+            throw new IllegalArgumentException("id contains unsupported characters: " + identifier);
         }
         return identifier;
     }

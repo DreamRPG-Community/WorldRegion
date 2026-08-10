@@ -48,7 +48,7 @@ final class RegionParticleGeometry {
         double deltaY = selectedEdge.end().y() - selectedEdge.start().y();
         double deltaZ = selectedEdge.end().z() - selectedEdge.start().z();
         double length = Math.sqrt(deltaX * deltaX + deltaY * deltaY + deltaZ * deltaZ);
-        int steps = Math.max(1, Math.min(maxSteps, (int) Math.ceil(length / spacing)));
+        int steps = Math.clamp((int) Math.ceil(length / spacing), 1, maxSteps);
         List<Point> points = new ArrayList<>(steps + 1);
         for (int index = 0; index <= steps; index++) {
             double progress = (double) index / steps;

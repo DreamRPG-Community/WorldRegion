@@ -29,7 +29,7 @@ public record LandmarkDefinition(
      * Validates the public landmark model.
      */
     public LandmarkDefinition {
-        id = requireIdentifier(id, "id");
+        id = requireIdentifier(id);
         displayName = requireText(displayName, "displayName");
         worldName = requireText(worldName, "worldName");
         if (!Double.isFinite(x) || !Double.isFinite(y) || !Double.isFinite(z)) {
@@ -40,10 +40,10 @@ public record LandmarkDefinition(
         }
     }
 
-    private static String requireIdentifier(String value, String fieldName) {
-        String identifier = requireText(value, fieldName);
+    private static String requireIdentifier(String value) {
+        String identifier = requireText(value, "id");
         if (!identifier.matches("[A-Za-z0-9_-]+")) {
-            throw new IllegalArgumentException(fieldName + " contains unsupported characters: " + identifier);
+            throw new IllegalArgumentException("id contains unsupported characters: " + identifier);
         }
         return identifier;
     }
