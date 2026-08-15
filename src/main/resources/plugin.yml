@@ -14,5 +14,5 @@ commands:
 
 permissions:
   worldregion.admin:
-    description: Allows WorldRegion administration and landmark teleportation.
+    description: Allows WorldRegion administration.
     default: op

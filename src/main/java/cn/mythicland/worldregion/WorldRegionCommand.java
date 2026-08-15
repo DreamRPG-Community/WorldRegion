@@ -197,7 +197,9 @@ final class WorldRegionCommand {
     @CommandHandler(
             value = "teleport",
             aliases = {"tp"},
-            usage = ROOT + " teleport <地标id>"
+            usage = ROOT + " teleport <地标id>",
+            permission = "",
+            inheritPermission = false
     )
     void teleport(CommandContext context) {
         context.requireArguments(1);
